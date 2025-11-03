@@ -1,3 +1,6 @@
-export * from "./verify";
-export * from "./settle";
+/**
+ * Facilitator service functions for payment verification and settlement
+ */
 
+export * from "./verification";
+export * from "./settlement";

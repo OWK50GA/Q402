@@ -25,7 +25,20 @@ export async function handleSettle(
       return;
     }
 
-    const payload: SignedPaymentPayload = parseResult.data as SignedPaymentPayload;
+    // Convert parsed data to match SignedPaymentPayload type
+    const parsed = parseResult.data;
+    const payload: SignedPaymentPayload = {
+      witnessSignature: parsed.witnessSignature as `0x${string}`,
+      authorization: {
+        chainId: BigInt(parsed.authorization.chainId),
+        address: parsed.authorization.address as `0x${string}`,
+        nonce: BigInt(parsed.authorization.nonce),
+        yParity: parsed.authorization.yParity,
+        r: parsed.authorization.r as `0x${string}`,
+        s: parsed.authorization.s as `0x${string}`,
+      },
+      paymentDetails: parsed.paymentDetails as SignedPaymentPayload["paymentDetails"],
+    };
 
     // Get network clients
     const clients = getNetworkClients(clientsMap, payload.paymentDetails.networkId);
@@ -39,7 +52,7 @@ export async function handleSettle(
     }
 
     // Settle payment
-    const result = await settlePaymentWithMonitoring(payload, clients);
+    const result = await settlePaymentWithMonitoring(payload);
 
     if (result.success) {
       res.json({

@@ -1,8 +1,14 @@
-# x402 BNB -  Delegated Payment Protocol
+# x402 BNB - EIP-7702 Delegated Payment Protocol
 
-A production-ready, gasless payment protocol for BSC and EVM networks using EIP-7702 delegated execution. Built to enhance project influence and governance execution for Quack AI ecosystem.
+> 🚀 **Future-Ready Implementation**: This project is a complete, production-grade implementation of EIP-7702 delegated execution for gasless payments on BSC and EVM networks. 
+>
+> **EIP-7702 Timeline**: Expected in Ethereum Pectra upgrade (2025 Q2-Q3), followed by BSC adoption.
+>
+> 📋 This implementation is ready for deployment when networks activate EIP-7702 support.
 
-**Inspired by the [x402 protocol](https://github.com/coinbase/x402)** - we extend the vision with EIP-7702's power.
+A next-generation gasless payment protocol using EIP-7702 delegated execution. Built to enhance project influence and governance execution for Quack AI ecosystem.
+
+**Inspired by the [x402 protocol](https://github.com/coinbase/x402)** - we extend the vision with EIP-7702's revolutionary approach.
 
 ## What is x402 BNB?
 
@@ -316,14 +322,18 @@ IMPLEMENTATION_WHITELIST=0x...,0x...
 
 ## Packages
 
-- **[@x402-bnb/core](./packages/core)** - Core SDK with signing and verification
+- **[@x402-bnb/core](./packages/core)** - Core SDK with client functions and type definitions
+- **[@x402-bnb/facilitator](./packages/facilitator)** - Independent facilitator service
 - **[@x402-bnb/middleware-express](./packages/middleware-express)** - Express middleware
 - **[@x402-bnb/middleware-hono](./packages/middleware-hono)** - Hono middleware
-- **[@x402-bnb/facilitator](./packages/facilitator)** - Facilitator service
 
-## Examples
+## Getting Started
 
-See [examples/bsc-testnet](./examples/bsc-testnet) for complete working examples on BSC testnet.
+For production deployment and usage:
+
+1. **Quick Start**: See [Docker Deployment Guide](./docs/DOCKER_DEPLOYMENT.md)
+2. **Architecture**: Review [System Architecture](./docs/ARCHITECTURE.md)
+3. **Security**: Read [Important Notices](./docs/IMPORTANT_NOTICE.md)
 
 ## Contributing
 
@@ -333,16 +343,29 @@ Contributions are welcome! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for g
 
 Apache-2.0
 
+## Documentation
+
+For detailed documentation, see the [`docs/`](./docs/) folder:
+
+- [Architecture](./docs/ARCHITECTURE.md) - System architecture and design
+- [Standards Compliance](./docs/STANDARDS_COMPLIANCE.md) - x402 protocol compliance
+- [Implementation Guide](./docs/X402_EIP7702_IMPLEMENTATION_SUMMARY.md) - Complete implementation details
+- [Deployment](./docs/DOCKER_DEPLOYMENT.md) - Docker and deployment instructions
+
 ## Acknowledgments
 
-This project is inspired by and builds upon the [x402 protocol](https://github.com/coinbase/x402) by Coinbase. We're grateful for their pioneering work in bringing gasless, programmable payments to the web.
+This project implements the [x402 protocol](https://github.com/coinbase/x402) standard with EIP-7702 extensions. x402 BNB follows the official x402 specifications for:
 
-The x402 BNB implementation extends this vision with EIP-7702 delegated execution, enabling:
-- Universal ERC-20 compatibility without token upgrades
-- No initial approval transactions
-- Seamless integration with BSC and future EIP-7702 networks
+- **HTTP 402 semantics** - Standard Payment Required responses
+- **Header formats** - X-PAYMENT and X-PAYMENT-RESPONSE headers
+- **Facilitator API** - Standard /verify, /settle, /supported endpoints
+- **Client-server flow** - Compatible with any x402 implementation
 
-Special thanks to the x402 community and all contributors to the original protocol.
+The x402 BNB implementation extends the standard with EIP-7702 delegated execution:
+- ✅ **Gasless payments** - Users never pay gas fees
+- ✅ **Universal ERC-20** - No token contract modifications needed
+- ✅ **No approvals** - Direct transfers without pre-approval
+- ✅ **Standard compliance** - Fully compatible with x402 ecosystem
 
 ## About Quack AI
 

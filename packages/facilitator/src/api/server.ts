@@ -24,17 +24,17 @@ export function createServer(
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-    
+
     if (req.method === "OPTIONS") {
       res.sendStatus(200);
       return;
     }
-    
+
     next();
   });
 
   // Routes
-  app.get("/", (req, res) => {
+  app.get("/", (_req, res) => {
     res.json({
       name: "x402 BNB Facilitator",
       version: "0.1.0",
@@ -53,12 +53,25 @@ export function createServer(
   app.get("/supported", (req, res) => handleSupported(req, res, clientsMap));
 
   // Health check
-  app.get("/health", (req, res) => {
-    res.json({ status: "ok" });
+  app.get("/health", (_req, res) => {
+    // Get facilitator address from the wallet client
+    let facilitatorAddress: string | undefined;
+    try {
+      // Get the first network client to extract facilitator address
+      const firstClient = Array.from(clientsMap.values())[0];
+      facilitatorAddress = firstClient?.walletClient?.account?.address;
+    } catch (error) {
+      console.warn("Could not determine facilitator address:", error);
+    }
+
+    res.json({
+      status: "ok",
+      facilitator: facilitatorAddress
+    });
   });
 
   // Error handler
-  app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     console.error("Server error:", err);
     res.status(500).json({
       error: "Internal server error",

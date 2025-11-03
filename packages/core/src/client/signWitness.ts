@@ -4,8 +4,6 @@ import type {
   WitnessMessage,
   BatchWitnessMessage,
   Eip712Domain,
-  WitnessTypedData,
-  BatchWitnessTypedData,
 } from "../types/eip712";
 import { SignatureError } from "../utils/errors";
 

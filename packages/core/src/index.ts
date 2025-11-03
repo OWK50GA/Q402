@@ -11,9 +11,9 @@
 
 export * from "./types";
 export * from "./client";
-export * from "./facilitator";
 export * from "./contracts";
 export * from "./utils";
+export * from "./facilitator";
 
 /**
  * Protocol version

@@ -1,8 +1,9 @@
 import { config } from "dotenv";
 import type { Address, Hex } from "viem";
+import path from "path";
 
-// Load environment variables
-config();
+// Load environment variables from root directory
+config({ path: path.resolve(process.cwd(), ".env") });
 
 /**
  * Environment configuration

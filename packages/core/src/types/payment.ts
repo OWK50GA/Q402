@@ -3,6 +3,9 @@ import type { AuthorizationTuple } from "./eip7702";
 import type { WitnessTypedData, BatchWitnessTypedData, PaymentItem } from "./eip712";
 import type { SupportedNetwork } from "./network";
 
+// Re-export PaymentItem for external use
+export type { PaymentItem } from "./eip712";
+
 /**
  * Payment scheme identifier
  */

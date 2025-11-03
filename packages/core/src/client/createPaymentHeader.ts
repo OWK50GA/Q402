@@ -6,7 +6,6 @@ import { signWitness, signWitnessWithWallet } from "./signWitness";
 import { prepareAuthorization } from "./prepareAuthorization";
 import { signAuthorization } from "./signAuthorization";
 import { encodeBase64 } from "../utils/encoding";
-import { PaymentScheme } from "../types/payment";
 
 /**
  * Create a complete payment header for X-PAYMENT

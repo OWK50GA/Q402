@@ -54,11 +54,13 @@ export async function signAuthorization(
 /**
  * Verify an authorization signature
  */
-export function verifyAuthorizationSignature(
+export async function verifyAuthorizationSignature(
   authorization: AuthorizationTuple,
   expectedSigner: Hex,
-): boolean {
+): Promise<boolean> {
   try {
+    const { recoverMessageAddress } = await import("viem");
+    
     // Encode authorization data
     const encoded = toRlp([
       authorization.chainId === 0n ? "0x" : `0x${authorization.chainId.toString(16)}`,
@@ -72,10 +74,22 @@ export function verifyAuthorizationSignature(
     // Hash the message
     const hash = keccak256(message);
 
-    // TODO: Implement signature verification
-    // This would use ecrecover to verify the signature matches the expected signer
+    // Reconstruct signature from components
+    const v = authorization.yParity + 27;
+    const signature = concat([
+      authorization.r,
+      authorization.s,
+      `0x${v.toString(16).padStart(2, "0")}` as Hex,
+    ]);
 
-    return true; // Placeholder
+    // Recover signer address
+    const recovered = await recoverMessageAddress({
+      message: { raw: hash },
+      signature,
+    });
+
+    // Verify signer matches expected
+    return recovered.toLowerCase() === expectedSigner.toLowerCase();
   } catch {
     return false;
   }

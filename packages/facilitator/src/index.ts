@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 /**
  * x402 BNB Facilitator Service
  * 
