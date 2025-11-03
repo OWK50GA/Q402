@@ -39,26 +39,266 @@ Traditional x402 requires ERC-3009 support, limiting token compatibility. x402 B
 - ✅ **Production-ready** for BSC mainnet/testnet
 - ✅ **Compatible with Account Abstraction** (EIP-4337 infrastructure)
 
-## Architecture Flow
+## Architecture Overview
 
+x402 BNB consists of four main components working together:
+
+```mermaid
+graph TB
+    subgraph "Client Application"
+        Client[Client SDK<br/>@x402-bnb/core]
+    end
+    
+    subgraph "Resource Server"
+        Server[Express/Hono Server]
+        Middleware[Middleware<br/>@x402-bnb/middleware-express<br/>@x402-bnb/middleware-hono]
+    end
+    
+    subgraph "Facilitator Service"
+        Facilitator[Facilitator API<br/>@x402-bnb/facilitator]
+        Verify[Verification Service]
+        Settle[Settlement Service]
+    end
+    
+    subgraph "Blockchain"
+        Blockchain[BSC/EVM Network]
+        Contract[Implementation Contract<br/>SignatureBasedExecutorV2]
+    end
+    
+    Client -->|1. Request Resource| Server
+    Server -->|2. 402 Payment Required| Client
+    Client -->|3. Create & Sign Payment| Client
+    Client -->|4. X-PAYMENT Header| Middleware
+    Middleware -->|5. Verify Payment| Facilitator
+    Facilitator -->|6. Check Signatures| Verify
+    Verify -->|7. Verification Result| Middleware
+    Middleware -->|8. Settle Payment| Facilitator
+    Facilitator -->|9. Submit Transaction| Settle
+    Settle -->|10. EIP-7702 Transaction| Blockchain
+    Blockchain -->|11. Execute Transfer| Contract
+    Contract -->|12. Transfer Tokens| Blockchain
+    Blockchain -->|13. Transaction Receipt| Settle
+    Settle -->|14. Settlement Result| Middleware
+    Middleware -->|15. Resource + X-PAYMENT-RESPONSE| Client
 ```
-1. Client → Request resource
-2. Server → 402 Response with paymentDetails
-   - scheme: evm/eip7702-delegated-payment or evm/eip7702-delegated-batch
-   - networkId, token(s), amount(s), recipient(s)
-   - implementationContract (whitelisted delegation target)
-   - EIP-712 typed-data for witness
-3. Client → Signs offline:
-   - witnessSig (EIP-712)
-   - authorization tuple [chain_id, implementationContract, nonce, y_parity, r, s] (EIP-7702)
-4. Client → Sends X-PAYMENT: <payload>
-5. Server/Facilitator → Verifies signatures & constraints
-6. Facilitator → Constructs & submits 0x04 transaction:
-   - to = owner (user's EOA)
-   - authorization_list = [tuple]
-   - data = encodeFunctionData(pay/payBatch, witnessPayload, witnessSig)
-7. Delegated implementation → Executes in EOA context, validates witness, performs ERC-20 transfer
-8. Facilitator → Returns Payment Execution Response
+
+## Complete Payment Flow
+
+### Sequence Diagram: End-to-End Payment Process
+
+```mermaid
+sequenceDiagram
+    participant User as User (EOA)
+    participant Client as Client SDK
+    participant Server as Resource Server
+    participant Middleware as x402 Middleware
+    participant Facilitator as Facilitator Service
+    participant Blockchain as BSC Network
+    participant Contract as Implementation Contract
+
+    Note over User,Contract: Phase 1: Payment Request & Preparation
+    
+    User->>Client: Request resource access
+    Client->>Server: GET /api/premium
+    Server->>Middleware: Check payment status
+    Middleware->>Client: 402 Payment Required<br/>(paymentDetails)
+    
+    Note over User,Contract: Phase 2: Client Creates Payment Signature
+    
+    Client->>Client: prepareWitness()<br/>Create EIP-712 message
+    Client->>Client: signWitness()<br/>Sign with user's private key
+    Client->>Client: prepareAuthorization()<br/>Create EIP-7702 auth tuple
+    Client->>Client: signAuthorization()<br/>Sign auth tuple
+    Client->>Client: createPaymentHeader()<br/>Combine & encode to Base64
+    
+    Note over User,Contract: Phase 3: Payment Submission & Verification
+    
+    Client->>Server: GET /api/premium<br/>+ X-PAYMENT header
+    Server->>Middleware: Extract X-PAYMENT header
+    Middleware->>Middleware: decodeBase64()<br/>Parse SignedPaymentPayload
+    
+    alt Auto-settle enabled
+        Middleware->>Facilitator: POST /verify<br/>(payment payload)
+        Facilitator->>Facilitator: verifyPaymentWithChecks()<br/>1. Check whitelist<br/>2. Verify EIP-712 signature<br/>3. Verify EIP-7702 authorization<br/>4. Check deadline & nonce
+        Facilitator->>Middleware: Verification Result ✅
+        
+        Note over User,Contract: Phase 4: Settlement
+        
+        Middleware->>Facilitator: POST /settle<br/>(payment payload)
+        Facilitator->>Facilitator: settlePaymentWithMonitoring()<br/>1. Encode function call<br/>2. Construct EIP-7702 tx<br/>3. Prepare authorization list
+        Facilitator->>Blockchain: Send Type 0x04 Transaction<br/>(from: Facilitator, to: User EOA)
+        
+        Note over User,Contract: Phase 5: On-Chain Execution
+        
+        Blockchain->>Contract: Execute in User EOA context<br/>(delegated execution)
+        Contract->>Contract: executeTransfer()<br/>1. Verify witness signature<br/>2. Check nonce & deadline<br/>3. Transfer ERC-20 tokens
+        Contract->>Blockchain: Transfer tokens<br/>(from: User, to: Recipient)
+        Blockchain->>Facilitator: Transaction Receipt ✅
+        Facilitator->>Middleware: Settlement Result<br/>(txHash, blockNumber)
+        Middleware->>Middleware: Generate X-PAYMENT-RESPONSE header
+    else Verification only
+        Middleware->>Facilitator: POST /verify
+        Facilitator->>Middleware: Verification Result ✅
+    end
+    
+    Note over User,Contract: Phase 6: Resource Delivery
+    
+    Middleware->>Server: Payment verified ✅
+    Server->>Client: 200 OK<br/>+ Resource Data<br/>+ X-PAYMENT-RESPONSE header
+    Client->>User: Display resource
+```
+
+### Detailed Component Interaction Flow
+
+```mermaid
+graph TD
+    subgraph "Client Side"
+        A[User Request] --> B[selectPaymentDetails]
+        B --> C[prepareWitness]
+        C --> D[signWitness<br/>EIP-712]
+        D --> E[prepareAuthorization]
+        E --> F[signAuthorization<br/>EIP-7702]
+        F --> G[createPaymentHeader<br/>Base64 Encode]
+    end
+    
+    subgraph "Server Side"
+        G --> H[Middleware: Extract Header]
+        H --> I{Has X-PAYMENT?}
+        I -->|No| J[Send 402 Response]
+        I -->|Yes| K[decodeBase64]
+        K --> L[verifyPayment]
+    end
+    
+    subgraph "Verification"
+        L --> M[Check Implementation Whitelist]
+        M --> N[Verify EIP-712 Signature]
+        N --> O[Verify EIP-7702 Authorization]
+        O --> P[Check Deadline & Nonce]
+        P --> Q{Valid?}
+    end
+    
+    subgraph "Settlement"
+        Q -->|Yes| R[settlePayment]
+        R --> S[Encode Function Call]
+        S --> T[Construct EIP-7702 Transaction]
+        T --> U[Set authorizationList]
+        U --> V[Send Transaction]
+    end
+    
+    subgraph "On-Chain Execution"
+        V --> W[Blockchain Receives Type 0x04]
+        W --> X[Delegate to Implementation Contract]
+        X --> Y[executeTransfer Function]
+        Y --> Z[Verify Witness Signature]
+        Z --> AA[Check Nonce & Deadline]
+        AA --> AB[Perform ERC-20 Transfer]
+        AB --> AC[Emit Events]
+    end
+    
+    Q -->|No| J
+    AC --> AD[Return Resource + X-PAYMENT-RESPONSE]
+```
+
+### EIP-7702 Transaction Structure
+
+```mermaid
+graph LR
+    subgraph "EIP-7702 Transaction (Type 0x04)"
+        A[Transaction Fields]
+        A --> B[to: User EOA Address]
+        A --> C[data: Function Call Data]
+        A --> D[authorizationList: Array]
+        A --> E[from: Facilitator Address]
+        A --> F[gasLimit, maxFeePerGas, etc.]
+    end
+    
+    subgraph "Authorization Tuple"
+        D --> G[chainId: 56]
+        D --> H[address: Implementation Contract]
+        D --> I[nonce: User's Auth Nonce]
+        D --> J[signature: r, s, yParity]
+    end
+    
+    subgraph "Function Call Data"
+        C --> K[Function: executeTransfer]
+        K --> L[owner: User Address]
+        K --> M[facilitator: Facilitator Address]
+        K --> N[token: ERC-20 Address]
+        K --> O[recipient: Server Address]
+        K --> P[amount: Payment Amount]
+        K --> Q[nonce: Application Nonce]
+        K --> R[deadline: Expiration Time]
+        K --> S[signature: Witness Signature]
+    end
+    
+    subgraph "Execution Flow"
+        B --> T[Network Pushes Contract Code]
+        T --> U[User EOA Temporarily Has Contract Code]
+        U --> V[Contract Executes in User Context]
+        V --> W[Contract Calls token.transferFrom]
+        W --> X[Transfer Succeeds<br/>No Approval Needed!]
+    end
+```
+
+## Code Flow: Key Functions
+
+### Client-Side Flow
+
+```mermaid
+graph TD
+    Start[User Initiates Payment] --> Select[selectPaymentDetails]
+    Select --> PrepareWit[prepareWitness<br/>Creates EIP-712 message<br/>owner, token, amount, to, deadline, paymentId, nonce]
+    PrepareWit --> SignWit[signWitness<br/>Signs with user private key<br/>Returns witnessSignature]
+    SignWit --> PrepareAuth[prepareAuthorization<br/>Creates auth tuple<br/>chainId, implementationAddress, nonce]
+    PrepareAuth --> SignAuth[signAuthorization<br/>Signs auth tuple<br/>Returns signed authorization]
+    SignAuth --> CreateHeader[createPaymentHeader<br/>Combines witness + authorization<br/>Encodes to Base64]
+    CreateHeader --> Send[Send X-PAYMENT Header]
+```
+
+### Server-Side Verification Flow
+
+```mermaid
+graph TD
+    Receive[Receive Request] --> Check{Has X-PAYMENT?}
+    Check -->|No| Send402[Send 402 Response]
+    Check -->|Yes| Decode[decodeBase64<br/>Parse SignedPaymentPayload]
+    Decode --> Verify[verifyPayment]
+    
+    Verify --> CheckWhitelist[Check Implementation Whitelist]
+    CheckWhitelist --> VerifyEIP712[Verify EIP-712 Signature<br/>Recover signer address]
+    VerifyEIP712 --> VerifyEIP7702[Verify EIP-7702 Authorization<br/>Check auth signature]
+    VerifyEIP7702 --> CheckDeadline[Check Deadline]
+    CheckDeadline --> CheckNonce[Check Nonce]
+    
+    CheckNonce --> Valid{Valid?}
+    Valid -->|No| Send402
+    Valid -->|Yes| AttachPayment[Attach payment info to request]
+    
+    AttachPayment --> AutoSettle{Auto-settle?}
+    AutoSettle -->|Yes| Settle[settlePayment]
+    AutoSettle -->|No| Next[Continue to route handler]
+    
+    Settle --> Next
+```
+
+### Facilitator Settlement Flow
+
+```mermaid
+graph TD
+    Receive[Receive /settle Request] --> Validate[Validate Payload Schema]
+    Validate --> GetClients[Get Network Clients]
+    GetClients --> SettlePay[settlePaymentWithMonitoring]
+    
+    SettlePay --> EncodeFunc[Encode executeTransfer Function<br/>With witness signature]
+    EncodeFunc --> PrepareAuth[Prepare Authorization Tuple<br/>From payload]
+    PrepareAuth --> ConstructTx[Construct EIP-7702 Transaction<br/>Type: 0x04<br/>To: User EOA<br/>Data: Function call<br/>authorizationList: [tuple]]
+    
+    ConstructTx --> SendTx[Send Transaction<br/>Facilitator pays gas]
+    SendTx --> Wait[Wait for Confirmation]
+    Wait --> CheckStatus{Status?}
+    
+    CheckStatus -->|Success| ReturnSuccess[Return Settlement Result<br/>txHash, blockNumber]
+    CheckStatus -->|Failed| ReturnError[Return Error]
 ```
 
 ## Quick Start
@@ -166,39 +406,46 @@ The facilitator exposes REST endpoints:
 - `POST /verify` - Verify payment signatures
 - `POST /settle` - Submit payment to blockchain
 - `GET /supported` - List supported networks
+- `GET /health` - Health check
 
 ## Contract Interfaces
 
 ### Single Payment
 
 ```solidity
-function pay(
+function executeTransfer(
   address owner,
+  address facilitator,
   address token,
+  address recipient,
   uint256 amount,
-  address to,
+  uint256 nonce,
   uint256 deadline,
-  bytes32 paymentId,
-  bytes witnessSig
+  bytes calldata signature
 ) external;
 ```
 
-### Batch Payment
+### Implementation Contract Flow
 
-```solidity
-struct PaymentItem {
-  address token;
-  uint256 amount;
-  address to;
-}
-
-function payBatch(
-  address owner,
-  PaymentItem[] calldata items,
-  uint256 deadline,
-  bytes32 paymentId,
-  bytes witnessSig
-) external;
+```mermaid
+graph TD
+    A[EIP-7702 Transaction Arrives] --> B[Network Pushes Contract Code to User EOA]
+    B --> C[Contract Code Executes in User Context]
+    C --> D[executeTransfer Called]
+    D --> E[Recover Signer from Witness Signature]
+    E --> F{Signer == owner?}
+    F -->|No| G[Revert: Invalid Signature]
+    F -->|Yes| H[Check Nonce]
+    H --> I{Nonce Valid?}
+    I -->|No| J[Revert: Invalid Nonce]
+    I -->|Yes| K[Check Deadline]
+    K --> L{Deadline Valid?}
+    L -->|No| M[Revert: Expired]
+    L -->|Yes| N[Increment Nonce]
+    N --> O[Call token.transferFrom]
+    O --> P[Transfer from User to Recipient]
+    P --> Q[Emit Payment Event]
+    Q --> R[Return Success]
 ```
 
 ## Payload Examples
@@ -316,6 +563,10 @@ IMPLEMENTATION_WHITELIST=0x...,0x...
 ## Roadmap
 
 - ✅ BSC mainnet/testnet support with sponsored payments & batch routing
+- ✅ Complete TypeScript implementation with full type safety
+- ✅ Express and Hono middleware support
+- ✅ Standalone facilitator service
+- ✅ Comprehensive documentation with architecture diagrams
 - 🚧 Witness extensions (jurisdiction/KYC/identity weighting)
 - 🚧 Smart nonce strategies & storage optimization
 - 🚧 Cross-chain expansion to more EIP-7702 networks
@@ -349,8 +600,8 @@ For detailed documentation, see the [`docs/`](./docs/) folder:
 
 - [Architecture](./docs/ARCHITECTURE.md) - System architecture and design
 - [Standards Compliance](./docs/STANDARDS_COMPLIANCE.md) - x402 protocol compliance
-- [Implementation Guide](./docs/X402_EIP7702_IMPLEMENTATION_SUMMARY.md) - Complete implementation details
 - [Deployment](./docs/DOCKER_DEPLOYMENT.md) - Docker and deployment instructions
+- [Deployment Readiness](./docs/DEPLOYMENT_READINESS.md) - Current implementation status
 
 ## Acknowledgments
 
@@ -376,4 +627,3 @@ For more information: [Quack AI Website](https://quackai.ai/)
 ---
 
 **Built with ❤️ for the decentralized web**
-
