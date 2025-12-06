@@ -15,7 +15,7 @@ import {
   selectPaymentDetails,
   SupportedNetworks,
   type PaymentRequiredResponse,
-} from "@x402-bnb/core";
+} from "@q402/core";
 
 async function main() {
   // Check for private key

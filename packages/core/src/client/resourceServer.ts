@@ -41,7 +41,7 @@ export function createPaymentRequired(
 ): PaymentRequiredResponse {
   return {
     x402Version: 1,
-    accepts,
+    accepts: accepts as any,
     error,
   };
 }

@@ -9,8 +9,8 @@ import { serve } from "@hono/node-server";
 import { createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { bscTestnet } from "viem/chains";
-import { createX402BnbMiddleware } from "@x402-bnb/middleware-hono";
-import { SupportedNetworks } from "@x402-bnb/core";
+import { createX402BnbMiddleware } from "@q402/middleware-hono";
+import { SupportedNetworks } from "@q402/core";
 
 async function main() {
   const app = new Hono();

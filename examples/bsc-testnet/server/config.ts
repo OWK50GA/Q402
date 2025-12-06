@@ -3,7 +3,7 @@
  */
 
 import type { Address } from "viem";
-import { SupportedNetworks } from "@x402-bnb/core";
+import { SupportedNetworks } from "@q402/core";
 
 export interface ServerConfig {
   network: typeof SupportedNetworks.BSC_TESTNET | typeof SupportedNetworks.BSC_MAINNET;

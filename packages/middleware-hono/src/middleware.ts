@@ -84,8 +84,8 @@ export function createQ402Middleware(
       c.set("payment", {
         verified: true,
         payer: verificationResult.payer!,
-        amount: payload.paymentDetails.amount,
-        token: payload.paymentDetails.token,
+        amount: "amount" in payload.paymentDetails ? payload.paymentDetails.amount : undefined,
+        token: "token" in payload.paymentDetails ? payload.paymentDetails.token : undefined,
       });
 
       // Settle payment if auto-settle is enabled

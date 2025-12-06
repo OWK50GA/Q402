@@ -13,7 +13,7 @@ import {
   SupportedNetworks,
   type Eip712Domain,
   type PaymentItem,
-} from "@x402-bnb/core";
+} from "@q402/core";
 
 async function main() {
   // Check for private key

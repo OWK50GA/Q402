@@ -1,5 +1,5 @@
 import { Hex, Address, WalletClient, PublicClient } from 'viem';
-import { SupportedNetwork } from '@x402-bnb/core';
+import { SupportedNetwork } from '@q402/core';
 import { Express } from 'express';
 
 /**

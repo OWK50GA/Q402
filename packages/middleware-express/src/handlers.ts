@@ -9,7 +9,7 @@ import type { PaymentEndpointConfig, Q402MiddlewareConfig } from "./config";
 export function create402Response(
   config: Q402MiddlewareConfig,
   endpoint: PaymentEndpointConfig,
-  req: Request,
+  _req: Request,
 ): PaymentRequiredResponse {
   const networkConfig = NetworkConfigs[config.network];
 
