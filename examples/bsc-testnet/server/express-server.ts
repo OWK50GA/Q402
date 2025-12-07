@@ -8,7 +8,7 @@ import express from "express";
 import { createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { bscTestnet } from "viem/chains";
-import { createX402BnbMiddleware } from "@q402/middleware-express";
+import { createQ402Middleware } from "@q402/middleware-express";
 import { SupportedNetworks } from "@q402/core";
 
 async function main() {
@@ -41,7 +41,7 @@ async function main() {
     process.exit(1);
   }
 
-  const paymentMiddleware = createX402BnbMiddleware({
+  const paymentMiddleware = createQ402Middleware({
     network: SupportedNetworks.BSC_TESTNET,
     recipientAddress,
     implementationContract,
