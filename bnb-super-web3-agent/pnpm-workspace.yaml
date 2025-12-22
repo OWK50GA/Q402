@@ -1,0 +1,5 @@
+# overrides:
+#   "@q402/core": "github:OWK50GA/Q402#main:packages/core"
+#   "@q402/facilitator": "github:OWK50GA/Q402#main:packages/facilitator"
+#   "@q402/middleware-express": "github:OWK50GA/Q402#main:packages/middleware-express"
+#   # "@q402/middleware-hono": "github:OWK50GA/Q402#main:packages/middleware-hono"
