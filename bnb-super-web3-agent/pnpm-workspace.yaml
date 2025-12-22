@@ -1,0 +1,5 @@
+overrides:
+  "@q402/core": link:../packages/core
+  "@q402/facilitator": link:../packages/facilitator
+  "@q402/middleware-express": link:../packages/middleware-express
+  "@q402/middleware-hono": link:../packages/middleware-hono

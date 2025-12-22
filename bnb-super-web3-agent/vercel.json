@@ -1,0 +1,4 @@
+{
+  "buildCommand": "cd .. && pnpm install && pnpm build && cd bnb-super-web3-agent && pnpm install && pnpm build",
+  "installCommand": "pnpm install"
+}
