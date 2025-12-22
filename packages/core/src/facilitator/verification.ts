@@ -117,10 +117,10 @@ function isValidAuthorization(authorization: any): boolean {
   const { chainId, address, nonce, yParity, r, s } = authorization;
   
   return !!(
-    typeof chainId === 'number' && chainId > 0 &&
+    Number(chainId) && Number(chainId) > 0 &&
     typeof address === 'string' && address.startsWith('0x') && address.length === 42 &&
-    typeof nonce === 'number' && nonce >= 0 &&
-    typeof yParity === 'number' && (yParity === 0 || yParity === 1) &&
+    Number(nonce) && Number(nonce) >= 0 &&
+    Number(yParity) && (Number(yParity) === 0 || Number(yParity) === 1) &&
     typeof r === 'string' && r.startsWith('0x') && r.length === 66 &&
     typeof s === 'string' && s.startsWith('0x') && s.length === 66
   );
